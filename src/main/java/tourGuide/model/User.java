@@ -1,4 +1,4 @@
-package tourGuide.user;
+package tourGuide.model;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -14,8 +14,8 @@ public class User {
 	private String phoneNumber;
 	private String emailAddress;
 	private Date latestLocationTimestamp;
-	private List<VisitedLocation> visitedLocations = new ArrayList<>();
-	private List<UserReward> userRewards = new ArrayList<>();
+	private final List<VisitedLocation> visitedLocations = new ArrayList<>();
+	private final List<UserReward> userRewards = new ArrayList<>();
 	private UserPreferences userPreferences = new UserPreferences();
 	private List<Provider> tripDeals = new ArrayList<>();
 	public User(UUID userId, String userName, String phoneNumber, String emailAddress) {
@@ -68,13 +68,16 @@ public class User {
 	public void clearVisitedLocations() {
 		visitedLocations.clear();
 	}
-	
+
 	public void addUserReward(UserReward userReward) {
-		if(userRewards.stream().filter(r -> !r.attraction.attractionName.equals(userReward.attraction)).count() == 0) {
-			userRewards.add(userReward);
+		for (UserReward existingReward : userRewards) {
+			if (!existingReward.attraction.attractionName.equals(userReward.attraction.attractionName)) {
+				return; // already exists
+			}
 		}
+		userRewards.add(userReward);
 	}
-	
+
 	public List<UserReward> getUserRewards() {
 		return userRewards;
 	}
