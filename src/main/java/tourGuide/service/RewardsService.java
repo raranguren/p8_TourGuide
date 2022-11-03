@@ -13,14 +13,14 @@ import rewardCentral.RewardCentral;
 import tourGuide.model.User;
 import tourGuide.model.UserReward;
 
+import static tourGuide.TourGuideConfiguration.*;
+
 @Service
 public class RewardsService {
-    private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945;
 
 	// proximity in miles
-    private int defaultProximityBuffer = 10;
+    private final int defaultProximityBuffer = DEFAULT_PROXIMITY_BUFFER;
 	private int proximityBuffer = defaultProximityBuffer;
-	private int attractionProximityRange = 200;
 	private final GpsUtil gpsUtil;
 	private final RewardCentral rewardsCentral;
 
@@ -51,7 +51,7 @@ public class RewardsService {
 									.thenApplyAsync((points) -> new UserReward(visitedLocation, attraction, points))
 									.get()
 					);
-					break; // if an attraction is visited then there is no need to loop through visited locations
+					break; // no need to loop through the rest of locations if the user was near
 				}
 			}
 		}
@@ -70,11 +70,11 @@ public class RewardsService {
 	}
 
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
-		return getDistance(attraction, location) > attractionProximityRange ? false : true;
+		return !(getDistance(attraction, location) > ATTRACTION_PROXIMITY_RANGE);
 	}
 
 	private boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
-		return getDistance(attraction, visitedLocation.location) > proximityBuffer ? false : true;
+		return !(getDistance(attraction, visitedLocation.location) > proximityBuffer);
 	}
 
 	CompletableFuture<Integer> getRewardPoints(Attraction attraction, User user) {
@@ -93,8 +93,7 @@ public class RewardsService {
                                + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2));
 
         double nauticalMiles = 60 * Math.toDegrees(angle);
-        double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;
-        return statuteMiles;
+		return STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;
 	}
 
 }
