@@ -2,13 +2,7 @@ package tourGuide.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
@@ -38,6 +32,7 @@ public class TourGuideService {
 
     public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
         this.gpsUtil = gpsUtil;
+        Locale.setDefault(Locale.US); // needed for GpsUtil to function
         this.rewardsService = rewardsService;
 
         if (IS_TEST_MODE_ENABLED) {
