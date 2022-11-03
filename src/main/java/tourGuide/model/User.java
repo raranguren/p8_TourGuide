@@ -71,7 +71,7 @@ public class User {
 
 	public void addUserReward(UserReward userReward) {
 		for (UserReward existingReward : userRewards) {
-			if (!existingReward.attraction.attractionName.equals(userReward.attraction.attractionName)) {
+			if (existingReward.attraction.attractionName.equals(userReward.attraction.attractionName)) {
 				return; // already exists
 			}
 		}
