@@ -23,6 +23,7 @@ public class RewardsService {
 	private int proximityBuffer = defaultProximityBuffer;
 	private final GpsUtil gpsUtil;
 	private final RewardCentral rewardsCentral;
+	private final ExecutorService executorService = Executors.newCachedThreadPool();
 
 	public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {
 		this.gpsUtil = gpsUtil;
@@ -57,12 +58,13 @@ public class RewardsService {
 		}
 
 		try {
-			List<Future<UserReward>> rewardFutures = Executors
-					.newCachedThreadPool()
-					.invokeAll(tasks);
+			long t = System.currentTimeMillis();
+			List<Future<UserReward>> rewardFutures = executorService.invokeAll(tasks);
 			for (Future<UserReward> future : rewardFutures) {
 				user.addUserReward(future.get()); // this setter verifies if the reward exists
 			}
+			t = -(t-System.currentTimeMillis());
+			System.out.println(Thread.currentThread().getName() + " : Waited for " + t + " ms when calculating " + tasks.size() + " reward(s) for user " + user.getUserName());
 		} catch (InterruptedException | ExecutionException e) {
 			throw new RuntimeException(e);
 		}
