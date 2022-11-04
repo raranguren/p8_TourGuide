@@ -58,13 +58,10 @@ public class RewardsService {
 		}
 
 		try {
-			long t = System.currentTimeMillis();
 			List<Future<UserReward>> rewardFutures = executorService.invokeAll(tasks);
 			for (Future<UserReward> future : rewardFutures) {
 				user.addUserReward(future.get()); // this setter verifies if the reward exists
 			}
-			t = -(t-System.currentTimeMillis());
-			System.out.println(Thread.currentThread().getName() + " : Waited for " + t + " ms when calculating " + tasks.size() + " reward(s) for user " + user.getUserName());
 		} catch (InterruptedException | ExecutionException e) {
 			throw new RuntimeException(e);
 		}
@@ -80,9 +77,9 @@ public class RewardsService {
 	}
 
 	CompletableFuture<Integer> getRewardPoints(Attraction attraction, User user) {
-		return CompletableFuture.supplyAsync( () ->
-			rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId())
-		);
+		return CompletableFuture.supplyAsync(
+				() -> rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId()),
+				executorService);
 	}
 
 	public double getDistance(Location loc1, Location loc2) {
