@@ -23,7 +23,6 @@ public class RewardsService {
 	private int proximityBuffer = defaultProximityBuffer;
 	private final GpsUtil gpsUtil;
 	private final RewardCentral rewardsCentral;
-	private final ExecutorService executorService = Executors.newCachedThreadPool();
 
 	public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {
 		this.gpsUtil = gpsUtil;
@@ -42,28 +41,27 @@ public class RewardsService {
 		List<VisitedLocation> userLocations = user.getVisitedLocations();
 		List<Attraction> attractions = gpsUtil.getAttractions();
 
-		Collection<Callable<UserReward>> tasks = new ArrayList<>();
+		List<Callable<UserReward>> tasks = new ArrayList<>();
 
 		for (Attraction attraction : attractions) {
 			for (VisitedLocation visitedLocation : userLocations) {
 				if (nearAttraction(visitedLocation, attraction)) {
-					tasks.add(() ->
-							getRewardPoints(attraction, user)
-									.thenApplyAsync((points) -> new UserReward(visitedLocation, attraction, points))
-									.get()
-					);
-					break; // no need to loop through the rest of locations if the user was near
+					tasks.add(() ->  new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
+					break; // no need to loop through the rest of locations if the user was found to be near already
 				}
 			}
 		}
 
+		ExecutorService executorService = Executors.newCachedThreadPool();
 		try {
 			List<Future<UserReward>> rewardFutures = executorService.invokeAll(tasks);
 			for (Future<UserReward> future : rewardFutures) {
-				user.addUserReward(future.get()); // this setter verifies if the reward exists
+				user.addUserReward(future.get()); // this setter filters out duplicated rewards
 			}
 		} catch (InterruptedException | ExecutionException e) {
 			throw new RuntimeException(e);
+		} finally {
+			executorService.shutdown();
 		}
 
 	}
@@ -76,10 +74,8 @@ public class RewardsService {
 		return !(getDistance(attraction, visitedLocation.location) > proximityBuffer);
 	}
 
-	CompletableFuture<Integer> getRewardPoints(Attraction attraction, User user) {
-		return CompletableFuture.supplyAsync(
-				() -> rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId()),
-				executorService);
+	private Integer getRewardPoints(Attraction attraction, User user) {
+		return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
 	}
 
 	public double getDistance(Location loc1, Location loc2) {
