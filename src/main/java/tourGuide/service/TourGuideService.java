@@ -3,6 +3,7 @@ package tourGuide.service;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
+import tourGuide.dto.NearbyAttractionDTO;
 import tourGuide.helper.InternalTestHelper;
 import tourGuide.tracker.Tracker;
 import tourGuide.model.User;
@@ -20,6 +22,7 @@ import tourGuide.model.UserReward;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
 
+import static java.lang.Math.min;
 import static tourGuide.TourGuideConfiguration.IS_TEST_MODE_ENABLED;
 
 @Service
@@ -84,14 +87,31 @@ public class TourGuideService {
         return visitedLocation;
     }
 
-    public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-        List<Attraction> nearbyAttractions = new ArrayList<>();
-        for (Attraction attraction : gpsUtil.getAttractions()) {
-            if (rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-                nearbyAttractions.add(attraction);
-            }
-        }
+    public List<NearbyAttractionDTO> getNearByAttractions(String userName) {
+        User user = getUser(userName);
+        Location location = getUserLocation(user).location;
+        List<NearbyAttractionDTO> nearbyAttractions = new ArrayList<>();
 
+        // Sort attractions by their distance to the user's location
+        Map<Attraction, Double> distances = gpsUtil.getAttractions().stream().parallel()
+                .collect(Collectors.toMap(
+                        attraction -> attraction,
+                        attraction -> rewardsService.getDistance(location, attraction)
+                ));
+        List<Attraction> attractionsSortedByDistanceAsc = distances.keySet().stream().parallel()
+                .sorted(Comparator.comparingDouble(distances::get))
+                .collect(Collectors.toList());
+
+        // Return DTO for the 5 closest attractions
+        int numberOfAttractions = min(5, distances.size());
+        for (int i=0; i<numberOfAttractions; i++) {
+            Attraction attraction = attractionsSortedByDistanceAsc.get(i);
+            nearbyAttractions.add(new NearbyAttractionDTO(
+                    attraction,
+                    location,
+                    distances.get(attraction),
+                    rewardsService.getRewardPoints(attraction, user)));
+        }
         return nearbyAttractions;
     }
 

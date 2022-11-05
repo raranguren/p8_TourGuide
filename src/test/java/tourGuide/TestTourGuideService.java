@@ -10,9 +10,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import gpsUtil.GpsUtil;
-import gpsUtil.location.Attraction;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
+import tourGuide.dto.NearbyAttractionDTO;
 import tourGuide.helper.InternalTestHelper;
 import tourGuide.service.RewardsService;
 import tourGuide.service.TourGuideService;
@@ -31,7 +31,7 @@ public class TestTourGuideService {
 		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
 		VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user);
 		tourGuideService.tracker.stopTracking();
-		assertTrue(visitedLocation.userId.equals(user.getUserId()));
+		assertEquals(visitedLocation.userId, user.getUserId());
 	}
 	
 	@Test
@@ -76,7 +76,7 @@ public class TestTourGuideService {
 		assertTrue(allUsers.contains(user));
 		assertTrue(allUsers.contains(user2));
 	}
-	
+
 	@Test
 	public void trackUser() {
 		GpsUtil gpsUtil = new GpsUtil();
@@ -91,8 +91,8 @@ public class TestTourGuideService {
 		
 		assertEquals(user.getUserId(), visitedLocation.userId);
 	}
-	
-	@Ignore // Not yet implemented
+
+	@Ignore // TODO: fix NullPointException
 	@Test
 	public void getNearbyAttractions() {
 		GpsUtil gpsUtil = new GpsUtil();
@@ -102,14 +102,17 @@ public class TestTourGuideService {
 		
 		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
 		VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user);
-		
-		List<Attraction> attractions = tourGuideService.getNearByAttractions(visitedLocation);
+		user.addToVisitedLocations(visitedLocation);
+
+		List<NearbyAttractionDTO> attractions = tourGuideService.getNearByAttractions(user.getUserName());
 		
 		tourGuideService.tracker.stopTracking();
 		
 		assertEquals(5, attractions.size());
 	}
-	
+
+	// TODO: investigate why test fails
+	@Test
 	public void getTripDeals() {
 		GpsUtil gpsUtil = new GpsUtil();
 		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
