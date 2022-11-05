@@ -6,7 +6,6 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import org.apache.commons.lang3.time.StopWatch;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import gpsUtil.GpsUtil;
@@ -39,23 +38,33 @@ public class TestPerformance {
      *     highVolumeGetRewards: 100,000 users within 20 minutes:
 	 *          assertTrue(TimeUnit.MINUTES.toSeconds(20) >= TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()));
 	 */
-	
-	@Ignore
+
 	@Test
-	public void highVolumeTrackLocation() {
+	public void highVolumeTrackLocation() throws InterruptedException {
 		GpsUtil gpsUtil = new GpsUtil();
 		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 		// Users should be incremented up to 100,000, and test finishes within 15 minutes
-		InternalTestHelper.setInternalUserNumber(100);
+		InternalTestHelper.setInternalUserNumber(100_000);
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
 
 		List<User> allUsers = tourGuideService.getAllUsers();
 		
 	    StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
-		for(User user : allUsers) {
-			tourGuideService.trackUserLocation(user);
-		}
+
+		Collection<Callable<Object>> tasks = new ArrayList<>();
+		allUsers.forEach(user ->
+				tasks.add(()->tourGuideService.trackUserLocation(user)));
+		ExecutorService executorService = Executors.newFixedThreadPool(100);
+			/* Benchmarks with 100_000 users:
+				 50 threads ->  3 min 24 sec
+				100 threads ->  3 min 21 sec (optimal)
+				400 threads ->  3 min 21 sec
+				600 threads ->  3 min 20 sec
+			 */
+		executorService.invokeAll(tasks);
+		executorService.shutdown();
+
 		stopWatch.stop();
 		tourGuideService.tracker.stopTracking();
 
@@ -81,10 +90,16 @@ public class TestPerformance {
 		Collection<Callable<Object>> tasks = new ArrayList<>();
 	    allUsers.forEach(user ->
 				tasks.add(Executors.callable(()->rewardsService.calculateRewards(user))));
-
-		ExecutorService executorService = Executors.newCachedThreadPool();
+		ExecutorService executorService = Executors.newFixedThreadPool(600);
+			/* Benchmarks with 100_000 users:
+				400 threads -> 130 sec
+				500 threads -> 104 sec
+				600 threads -> 101 sec  (optimal)
+				700 threads -> 101 sec
+			 */
 		executorService.invokeAll(tasks);
 		executorService.shutdown();
+
 		for(User user : allUsers) {
 			assertTrue(user.getUserRewards().size() > 0);
 		}
