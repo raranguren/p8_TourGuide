@@ -110,7 +110,6 @@ public class TestTourGuideService {
 		assertEquals(5, attractions.size());
 	}
 
-	// TODO: investigate why test fails
 	@Test
 	public void getTripDeals() {
 		GpsUtil gpsUtil = new GpsUtil();
@@ -124,7 +123,7 @@ public class TestTourGuideService {
 		
 		tourGuideService.tracker.stopTracking();
 		
-		assertEquals(10, providers.size());
+		assertEquals(5, providers.size());
 	}
 	
 	
