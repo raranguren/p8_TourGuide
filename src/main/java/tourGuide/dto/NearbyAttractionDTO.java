@@ -20,7 +20,7 @@ public class NearbyAttractionDTO {
 
     public NearbyAttractionDTO(Attraction attraction, Location userLocation, double distanceInMiles, int rewardPoints) {
         this.attractionName = attraction.attractionName;
-        this.attractionLocation = attraction; // downcast
+        this.attractionLocation = new Location(attraction.latitude, attraction.longitude);
         this.userLocation = userLocation;
         this.distanceInMiles = distanceInMiles;
         this.rewardPoints = rewardPoints;
