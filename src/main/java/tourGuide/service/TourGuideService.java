@@ -3,6 +3,8 @@ package tourGuide.service;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -32,6 +34,8 @@ public class TourGuideService {
     private final RewardsService rewardsService;
     private final TripPricer tripPricer = new TripPricer();
     public final Tracker tracker;
+
+    private final ExecutorService executorService = Executors.newFixedThreadPool(100);
 
     public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
         this.gpsUtil = gpsUtil;
@@ -73,6 +77,7 @@ public class TourGuideService {
     }
 
     public List<Provider> getTripDeals(User user) {
+        // TODO use TripPricerTask, executor at class level
         int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(UserReward::getRewardPoints).sum();
         List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(), user.getUserPreferences().getNumberOfAdults(),
                 user.getUserPreferences().getNumberOfChildren(), user.getUserPreferences().getTripDuration(), cumulatativeRewardPoints);
@@ -81,6 +86,7 @@ public class TourGuideService {
     }
 
     public VisitedLocation trackUserLocation(User user) {
+        // TODO use completable future, and executor at Class level
         VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
         user.addToVisitedLocations(visitedLocation);
         rewardsService.calculateRewards(user);
@@ -115,8 +121,13 @@ public class TourGuideService {
         return nearbyAttractions;
     }
 
+    public void shutdown() {
+        tracker.stopTracking();
+        executorService.shutdown();
+    }
+
     private void addShutDownHook() {
-        Runtime.getRuntime().addShutdownHook(new Thread(tracker::stopTracking));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
     }
 
     /**********************************************************************************
