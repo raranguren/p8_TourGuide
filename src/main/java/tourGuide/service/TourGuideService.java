@@ -77,7 +77,6 @@ public class TourGuideService {
     }
 
     public List<Provider> getTripDeals(User user) {
-        // TODO use TripPricerTask, executor at class level
         int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(UserReward::getRewardPoints).sum();
         List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(), user.getUserPreferences().getNumberOfAdults(),
                 user.getUserPreferences().getNumberOfChildren(), user.getUserPreferences().getTripDuration(), cumulatativeRewardPoints);
