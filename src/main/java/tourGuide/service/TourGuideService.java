@@ -88,7 +88,6 @@ public class TourGuideService {
     }
 
     public VisitedLocation trackUserLocation(User user) {
-        // TODO use completable future, and executor at Class level
         VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
         user.addToVisitedLocations(visitedLocation);
         rewardsService.calculateRewards(user);
