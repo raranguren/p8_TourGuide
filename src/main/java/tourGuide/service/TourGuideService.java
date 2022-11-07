@@ -3,8 +3,6 @@ package tourGuide.service;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -34,8 +32,6 @@ public class TourGuideService {
     private final RewardsService rewardsService;
     private final TripPricer tripPricer = new TripPricer();
     public final Tracker tracker;
-
-    private final ExecutorService executorService = Executors.newFixedThreadPool(100);
 
     public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
         this.gpsUtil = gpsUtil;
@@ -135,13 +131,8 @@ public class TourGuideService {
                         user -> user.getLastVisitedLocation().location));
     }
 
-    public void shutdown() {
-        tracker.stopTracking();
-        executorService.shutdown();
-    }
-
     private void addShutDownHook() {
-        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+        Runtime.getRuntime().addShutdownHook(new Thread(tracker::stopTracking));
     }
 
     /**********************************************************************************
