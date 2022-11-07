@@ -94,6 +94,14 @@ public class TourGuideService {
         return visitedLocation;
     }
 
+    //  Get the closest five tourist attractions to the user - no matter how far away they are.
+    //  Return a new JSON object that contains:
+    //   - Name of Tourist attraction,
+    //   - Tourist attractions lat/long,
+    //   - The user's location lat/long,
+    //   - The distance in miles between the user's location and each of the attractions.
+    //   - The reward points for visiting each Attraction.
+    //  Note: Attraction reward points can be gathered from RewardsCentral
     public List<NearbyAttractionDTO> getNearByAttractions(String userName) {
         User user = getUser(userName);
         Location location = getUserLocation(user).location;
@@ -114,12 +122,17 @@ public class TourGuideService {
         for (int i=0; i<numberOfAttractions; i++) {
             Attraction attraction = attractionsSortedByDistanceAsc.get(i);
             nearbyAttractions.add(new NearbyAttractionDTO(
-                    attraction,
-                    location,
-                    distances.get(attraction),
+                    attraction, location, distances.get(attraction),
                     rewardsService.getRewardPoints(attraction, user)));
         }
         return nearbyAttractions;
+    }
+
+    public Map<String, Location> getAllCurrentLocations() {
+        return getAllUsers().stream().parallel()
+                .collect(Collectors.toMap(
+                        user -> user.getUserId().toString(),
+                        user -> user.getLastVisitedLocation().location));
     }
 
     public void shutdown() {
