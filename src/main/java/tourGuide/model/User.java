@@ -1,9 +1,6 @@
 package tourGuide.model;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import gpsUtil.location.VisitedLocation;
 import tripPricer.Provider;
@@ -90,8 +87,10 @@ public class User {
 		this.userPreferences = userPreferences;
 	}
 
-	public VisitedLocation getLastVisitedLocation() {
-		return visitedLocations.get(visitedLocations.size() - 1);
+	public Optional<VisitedLocation> getLastVisitedLocation() {
+		int size = visitedLocations.size();
+		if (size == 0) return Optional.empty();
+		return Optional.of(visitedLocations.get(size - 1));
 	}
 	
 	public void setTripDeals(List<Provider> tripDeals) {

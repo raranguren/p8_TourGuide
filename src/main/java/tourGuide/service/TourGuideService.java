@@ -3,6 +3,7 @@ package tourGuide.service;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -53,9 +54,8 @@ public class TourGuideService {
     }
 
     public VisitedLocation getUserLocation(User user) {
-        return (user.getVisitedLocations().size() > 0) ?
-                user.getLastVisitedLocation() :
-                trackUserLocation(user);
+        return user.getLastVisitedLocation()
+                .orElse(trackUserLocation(user));
     }
 
     public User getUser(String userName) {
@@ -125,10 +125,13 @@ public class TourGuideService {
     }
 
     public Map<String, Location> getAllCurrentLocations() {
-        return getAllUsers().stream().parallel()
-                .collect(Collectors.toMap(
-                        user -> user.getUserId().toString(),
-                        user -> user.getLastVisitedLocation().location));
+        Map<String, Location> locations = new ConcurrentHashMap<>();
+        for (User user : getAllUsers()) {
+            String uuid = user.getUserId().toString();
+            Location location = getUserLocation(user).location;
+            locations.put(uuid, location);
+        }
+        return locations;
     }
 
     private void addShutDownHook() {
