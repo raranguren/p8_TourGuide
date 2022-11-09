@@ -6,3 +6,4 @@ A learning exercise about increasing the performance of concurrent methods
 ## Prerequisites
 
 - Java 8
+- Docker
