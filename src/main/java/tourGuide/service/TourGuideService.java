@@ -30,7 +30,8 @@ public class TourGuideService {
     private final GpsUtil gpsUtil;
     private final RewardsService rewardsService;
     private final TripPricer tripPricer = new TripPricer();
-    public final Tracker tracker;
+    private final Tracker tracker;
+    public final ExecutorService executorService;
 
     public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
         this.gpsUtil = gpsUtil;
@@ -44,6 +45,7 @@ public class TourGuideService {
             logger.debug("Finished initializing users");
         }
         tracker = new Tracker(this);
+        executorService = Executors.newFixedThreadPool(600);
         addShutDownHook();
     }
 
@@ -108,7 +110,6 @@ public class TourGuideService {
         }
 
         int RESPONSE_SIZE = 5;
-        ExecutorService executorService = Executors.newFixedThreadPool(RESPONSE_SIZE);
         List<Callable<NearbyAttractionDTO>> tasks = new ArrayList<>();
         for (int i = 0; i < RESPONSE_SIZE; i++) {
             Attraction attraction = attractions.poll();
@@ -129,8 +130,6 @@ public class TourGuideService {
             return nearbyAttractions;
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
-        } finally {
-            executorService.shutdown();
         }
     }
 
@@ -144,8 +143,24 @@ public class TourGuideService {
         return locations;
     }
 
+    public void stopTrackingUsersAndCompleteTasks() {
+        tracker.stopTracking();
+        logger.debug("Tracker stopped. Completing tasks . . .");
+        executorService.shutdown();
+        int minutes = 0;
+        while (true) {
+            try {
+                if (executorService.awaitTermination(1, TimeUnit.MINUTES)) break;
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            logger.debug("Completing tasks . . . (elapsed {} minutes)", ++minutes);
+        }
+    }
+
     private void addShutDownHook() {
-        Runtime.getRuntime().addShutdownHook(new Thread(tracker::stopTracking));
+        Runtime.getRuntime().addShutdownHook(
+                new Thread(this::stopTrackingUsersAndCompleteTasks, "shutdown hook"));
     }
 
     /**********************************************************************************
