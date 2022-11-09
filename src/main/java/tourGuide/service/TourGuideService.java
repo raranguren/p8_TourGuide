@@ -3,8 +3,7 @@ package tourGuide.service;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
@@ -23,7 +22,6 @@ import tourGuide.model.UserReward;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
 
-import static java.lang.Math.min;
 import static tourGuide.TourGuideConfiguration.IS_TEST_MODE_ENABLED;
 
 @Service
@@ -100,28 +98,40 @@ public class TourGuideService {
     //  Note: Attraction reward points can be gathered from RewardsCentral
     public List<NearbyAttractionDTO> getNearByAttractions(String userName) {
         User user = getUser(userName);
-        Location location = getUserLocation(user).location;
-        List<NearbyAttractionDTO> nearbyAttractions = new ArrayList<>();
+        Location userLocation = getUserLocation(user).location;
+        Map<Attraction, Double> distances = new HashMap<>();
+        PriorityQueue<Attraction> attractions = new PriorityQueue<>(Comparator.comparingDouble(distances::get));
 
-        // Sort attractions by their distance to the user's location
-        Map<Attraction, Double> distances = gpsUtil.getAttractions().stream().parallel()
-                .collect(Collectors.toMap(
-                        attraction -> attraction,
-                        attraction -> rewardsService.getDistance(location, attraction)
-                ));
-        List<Attraction> attractionsSortedByDistanceAsc = distances.keySet().stream().parallel()
-                .sorted(Comparator.comparingDouble(distances::get))
-                .collect(Collectors.toList());
-
-        // Return DTO for the 5 closest attractions
-        int numberOfAttractions = min(5, distances.size());
-        for (int i=0; i<numberOfAttractions; i++) {
-            Attraction attraction = attractionsSortedByDistanceAsc.get(i);
-            nearbyAttractions.add(new NearbyAttractionDTO(
-                    attraction, location, distances.get(attraction),
-                    rewardsService.getRewardPoints(attraction, user)));
+        for (Attraction attraction : gpsUtil.getAttractions()) {
+            distances.put(attraction, rewardsService.getDistance(userLocation, attraction));
+            attractions.add(attraction);
         }
-        return nearbyAttractions;
+
+        int RESPONSE_SIZE = 5;
+        ExecutorService executorService = Executors.newFixedThreadPool(RESPONSE_SIZE);
+        List<Callable<NearbyAttractionDTO>> tasks = new ArrayList<>();
+        for (int i = 0; i < RESPONSE_SIZE; i++) {
+            Attraction attraction = attractions.poll();
+            if (attraction != null) {
+                tasks.add(()->{
+                    int rewardPoints = rewardsService.getRewardPoints(attraction, user);
+                    return new NearbyAttractionDTO(
+                            attraction, userLocation, distances.get(attraction), rewardPoints);
+                });
+            }
+        }
+
+        try {
+            List<NearbyAttractionDTO> nearbyAttractions = new ArrayList<>();
+            for (Future<NearbyAttractionDTO> future : executorService.invokeAll(tasks)) {
+                nearbyAttractions.add(future.get());
+            }
+            return nearbyAttractions;
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        } finally {
+            executorService.shutdown();
+        }
     }
 
     public Map<String, Location> getAllCurrentLocations() {
