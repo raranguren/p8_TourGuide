@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.jsoniter.output.JsonStream;
 
 import gpsUtil.location.VisitedLocation;
+import tourGuide.model.UserPreferences;
 import tourGuide.service.TourGuideService;
 import tourGuide.model.User;
 import tripPricer.Provider;
@@ -62,6 +63,22 @@ public class TourGuideController {
     public String getTripDeals(@RequestParam String userName) {
     	List<Provider> providers = tourGuideService.getTripDeals(getUser(userName));
     	return JsonStream.serialize(providers);
+    }
+
+    @RequestMapping("/setUserPreferences")
+    public String setUserPreferences(@RequestParam String userName,
+                                 @RequestParam(required = false) String currency,
+                                 @RequestParam(required = false) Integer attractionProximity,
+                                 @RequestParam(required = false) Double lowerPricePoint,
+                                 @RequestParam(required = false) Double highPricePoint,
+                                 @RequestParam(required = false) Integer tripDuration,
+                                 @RequestParam(required = false) Integer ticketQuantity,
+                                 @RequestParam(required = false) Integer numberOfAdults,
+                                 @RequestParam(required = false) Integer numberOfChildren) {
+        UserPreferences updatedPreferences = tourGuideService.setUserPreferences(
+                getUser(userName), currency, attractionProximity, lowerPricePoint, highPricePoint,
+                tripDuration, ticketQuantity, numberOfAdults, numberOfChildren);
+        return JsonStream.serialize(updatedPreferences);
     }
     
     private User getUser(String userName) {

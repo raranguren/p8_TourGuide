@@ -1,11 +1,11 @@
 package tourGuide;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import gpsUtil.location.Location;
+import org.javamoney.moneta.Money;
 import org.junit.Test;
 
 import gpsUtil.GpsUtil;
@@ -13,10 +13,13 @@ import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
 import tourGuide.dto.NearbyAttractionDTO;
 import tourGuide.helper.InternalTestHelper;
+import tourGuide.model.UserPreferences;
 import tourGuide.service.RewardsService;
 import tourGuide.service.TourGuideService;
 import tourGuide.model.User;
 import tripPricer.Provider;
+
+import static org.junit.Assert.*;
 
 public class TestTourGuideService {
 
@@ -106,7 +109,6 @@ public class TestTourGuideService {
 		List<NearbyAttractionDTO> attractions = tourGuideService.getNearByAttractions(user.getUserName());
 
 		tourGuideService.stopTrackingUsersAndCompleteTasks();
-		
 		assertEquals(5, attractions.size());
 	}
 
@@ -122,8 +124,46 @@ public class TestTourGuideService {
 		List<Provider> providers = tourGuideService.getTripDeals(user);
 
 		tourGuideService.stopTrackingUsersAndCompleteTasks();
-		
 		assertEquals(5, providers.size());
+	}
+
+	@Test
+	public void getAllCurrentLocations() {
+		GpsUtil gpsUtil = new GpsUtil();
+		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+		InternalTestHelper.setInternalUserNumber(5);
+		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
+
+		Map<String, Location> locations = tourGuideService.getAllCurrentLocations();
+
+		tourGuideService.stopTrackingUsersAndCompleteTasks();
+		assertEquals(5, locations.size());
+	}
+
+	@Test
+	public void setUserPreferences() {
+		GpsUtil gpsUtil = new GpsUtil();
+		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+		InternalTestHelper.setInternalUserNumber(0);
+		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
+
+		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+
+		UserPreferences preferencesNotChanged = tourGuideService.setUserPreferences(user,
+				null, null, null, null, null, null, null,null);
+		UserPreferences preferencesChanged = tourGuideService.setUserPreferences(user,
+				"EUR", 100, 2.50, 50.50, 2, 3, 2,1);
+
+		assertNotNull(preferencesNotChanged.getHighPricePoint());
+		assertNotNull(preferencesNotChanged.getLowerPricePoint());
+		assertEquals(100, preferencesChanged.getAttractionProximity());
+		assertEquals(Money.of(2.50, "EUR"), preferencesChanged.getLowerPricePoint());
+		assertEquals(Money.of(50.50, "EUR"), preferencesChanged.getHighPricePoint());
+		assertEquals(2, preferencesChanged.getTripDuration());
+		assertEquals(3, preferencesChanged.getTicketQuantity());
+		assertEquals(2, preferencesChanged.getNumberOfAdults());
+		assertEquals(1, preferencesChanged.getNumberOfChildren());
+
 	}
 	
 	

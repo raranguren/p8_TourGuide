@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
+import org.javamoney.moneta.Money;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -16,11 +17,16 @@ import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 import tourGuide.dto.NearbyAttractionDTO;
 import tourGuide.helper.InternalTestHelper;
+import tourGuide.model.UserPreferences;
 import tourGuide.tracker.Tracker;
 import tourGuide.model.User;
 import tourGuide.model.UserReward;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
+
+import javax.money.CurrencyUnit;
+import javax.money.Monetary;
+import javax.money.MonetaryException;
 
 import static tourGuide.TourGuideConfiguration.IS_TEST_MODE_ENABLED;
 
@@ -144,6 +150,35 @@ public class TourGuideService {
         }
         return locations;
     }
+
+    public UserPreferences setUserPreferences(User user, String currencyCode, Integer attractionProximity,
+                                              Double lowerPricePoint, Double highPricePoint,
+                                              Integer tripDuration, Integer ticketQuantity,
+                                              Integer numberOfAdults, Integer numberOfChildren) {
+        UserPreferences preferences = user.getUserPreferences();
+        CurrencyUnit currency;
+        try {
+            currency = Monetary.getCurrency(currencyCode);
+        } catch (MonetaryException | NullPointerException e) {
+            currency = preferences.getHighPricePoint().getCurrency();
+        }
+
+        if (attractionProximity != null) preferences.setAttractionProximity(attractionProximity);
+        if (lowerPricePoint != null) preferences.setLowerPricePoint(Money.of(lowerPricePoint, currency));
+        if (highPricePoint != null) preferences.setHighPricePoint(Money.of(highPricePoint, currency));
+        if (tripDuration != null) preferences.setTripDuration(tripDuration);
+        if (ticketQuantity != null) preferences.setTicketQuantity(ticketQuantity);
+        if (numberOfAdults != null) preferences.setNumberOfAdults(numberOfAdults);
+        if (numberOfChildren != null) preferences.setNumberOfChildren(numberOfChildren);
+
+        user.setUserPreferences(preferences);
+        return preferences;
+    }
+
+
+    /*****************************************************************
+     * When shutting down, ensure that all calculations are complete
+     *****************************************************************/
 
     public void stopTrackingUsersAndCompleteTasks() {
         tracker.stopTracking();
