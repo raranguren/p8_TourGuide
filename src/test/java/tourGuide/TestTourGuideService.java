@@ -149,21 +149,31 @@ public class TestTourGuideService {
 
 		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
 
-		UserPreferences preferencesNotChanged = tourGuideService.setUserPreferences(user,
-				null, null, null, null, null, null, null,null);
-		UserPreferences preferencesChanged = tourGuideService.setUserPreferences(user,
-				"EUR", 100, 2.50, 50.50, 2, 3, 2,1);
+		tourGuideService.setUserPreferences(user, 2, 3, 4, 10.10, 50.50);
+		tourGuideService.stopTrackingUsersAndCompleteTasks();
 
-		assertNotNull(preferencesNotChanged.getHighPricePoint());
-		assertNotNull(preferencesNotChanged.getLowerPricePoint());
-		assertEquals(100, preferencesChanged.getAttractionProximity());
-		assertEquals(Money.of(2.50, "EUR"), preferencesChanged.getLowerPricePoint());
-		assertEquals(Money.of(50.50, "EUR"), preferencesChanged.getHighPricePoint());
-		assertEquals(2, preferencesChanged.getTripDuration());
-		assertEquals(3, preferencesChanged.getTicketQuantity());
-		assertEquals(2, preferencesChanged.getNumberOfAdults());
-		assertEquals(1, preferencesChanged.getNumberOfChildren());
+		UserPreferences result = user.getUserPreferences();
+		assertEquals(2, result.getNumberOfAdults());
+		assertEquals(3, result.getNumberOfChildren());
+		assertEquals(4, result.getTripDuration());
+		assertEquals(Money.of(10.10, "USD"), result.getLowerPricePoint());
+		assertEquals(Money.of(50.50, "USD"), result.getHighPricePoint());
+	}
 
+	@Test
+	public void getTripDeals_uses_Preferences() {
+		GpsUtil gpsUtil = new GpsUtil();
+		RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+		InternalTestHelper.setInternalUserNumber(0);
+		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
+
+		User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
+
+		tourGuideService.setUserPreferences(user, 2, 3, 1, 9999, 0);
+		List<Provider> providers = tourGuideService.getTripDeals(user);
+		tourGuideService.stopTrackingUsersAndCompleteTasks();
+
+		assertEquals(0, providers.size());
 	}
 	
 	

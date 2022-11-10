@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.javamoney.moneta.Money;
@@ -23,10 +24,6 @@ import tourGuide.model.User;
 import tourGuide.model.UserReward;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
-
-import javax.money.CurrencyUnit;
-import javax.money.Monetary;
-import javax.money.MonetaryException;
 
 import static tourGuide.TourGuideConfiguration.IS_TEST_MODE_ENABLED;
 
@@ -79,12 +76,23 @@ public class TourGuideService {
     }
 
     public List<Provider> getTripDeals(User user) {
-        int RewardPointsTotal = 0;
+        int rewardPointsTotal = 0;
         for (UserReward reward : user.getUserRewards()) {
-            RewardPointsTotal += reward.getRewardPoints();
+            rewardPointsTotal += reward.getRewardPoints();
         }
-        List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(), user.getUserPreferences().getNumberOfAdults(),
-                user.getUserPreferences().getNumberOfChildren(), user.getUserPreferences().getTripDuration(), RewardPointsTotal);
+        UserPreferences preferences = user.getUserPreferences();
+        int adults = preferences.getNumberOfAdults();
+        int children = preferences.getNumberOfChildren();
+        int nightsStay = preferences.getTripDuration();
+        Money minPrice = preferences.getLowerPricePoint();
+        Money maxPrice = preferences.getHighPricePoint();
+        List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
+                        adults, children, nightsStay, rewardPointsTotal)
+                .stream().filter(provider -> {
+                    Money price = Money.of(provider.price, "USD");
+                    return (price.isLessThanOrEqualTo(maxPrice) && price.isGreaterThanOrEqualTo(minPrice));
+                })
+                .collect(Collectors.toList());
         user.setTripDeals(providers);
         return providers;
     }
@@ -151,28 +159,14 @@ public class TourGuideService {
         return locations;
     }
 
-    public UserPreferences setUserPreferences(User user, String currencyCode, Integer attractionProximity,
-                                              Double lowerPricePoint, Double highPricePoint,
-                                              Integer tripDuration, Integer ticketQuantity,
-                                              Integer numberOfAdults, Integer numberOfChildren) {
+    public void setUserPreferences(User user, int adults, int children, int nightsStay, double minPrice, double maxPrice) {
         UserPreferences preferences = user.getUserPreferences();
-        CurrencyUnit currency;
-        try {
-            currency = Monetary.getCurrency(currencyCode);
-        } catch (MonetaryException | NullPointerException e) {
-            currency = preferences.getHighPricePoint().getCurrency();
-        }
-
-        if (attractionProximity != null) preferences.setAttractionProximity(attractionProximity);
-        if (lowerPricePoint != null) preferences.setLowerPricePoint(Money.of(lowerPricePoint, currency));
-        if (highPricePoint != null) preferences.setHighPricePoint(Money.of(highPricePoint, currency));
-        if (tripDuration != null) preferences.setTripDuration(tripDuration);
-        if (ticketQuantity != null) preferences.setTicketQuantity(ticketQuantity);
-        if (numberOfAdults != null) preferences.setNumberOfAdults(numberOfAdults);
-        if (numberOfChildren != null) preferences.setNumberOfChildren(numberOfChildren);
-
+        preferences.setNumberOfAdults(adults);
+        preferences.setNumberOfChildren(children);
+        preferences.setTripDuration(nightsStay);
+        preferences.setLowerPricePoint(Money.of(minPrice, "USD"));
+        preferences.setHighPricePoint(Money.of(maxPrice, "USD"));
         user.setUserPreferences(preferences);
-        return preferences;
     }
 
 
