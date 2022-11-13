@@ -1,0 +1,25 @@
+image: java:8-jdk
+stages:
+  - build
+  - test
+
+before_script: # Prevents permission errors
+  - chmod 777 ./gradlew
+
+build:
+  stage: build
+  script: # Run gradle to generate JAR file
+    - ./gradlew assemble
+
+  artifacts:
+    paths:
+      - build/libs/*.jar
+
+tests:
+  stage: test
+  script: # Run tests and produce JaCoCo reports
+    - ./gradlew test
+
+  artifacts:
+    paths:
+      - build/jacocoHtml/**
