@@ -1,0 +1,56 @@
+@startuml
+
+class User {
+	+userId
+	+userName
+	+phoneNumber
+	+emailAddress
+	+latestLocationTimestamp
+}
+
+class UserPreferences {
+	+attractionProximity
+	+lowerPricePoint
+	+highPricePoint
+	+tripDuration
+	+ticketQuantity
+	+numberOfAdults
+	+numberOfChildren
+}
+
+class UserReward {
+	+rewardPoints
+}
+
+class Provider {
+	+tripId
+	+name
+	+price
+}
+
+class Location {
+	+longitude
+	+latitude
+}
+
+class Attraction extends Location {
+	+attractionId
+	+attractionName
+	+city
+	+state
+}
+
+class VisitedLocation {
+	+userId
+	+timeVisited
+}
+
+User o--> "*" VisitedLocation
+User o--> "*" UserReward
+User *-left-> "1" UserPreferences
+User o-> "*" Provider : deals
+UserReward *-> "1" VisitedLocation
+UserReward *--> "1" Attraction
+VisitedLocation *-> "1" Location
+
+@enduml
